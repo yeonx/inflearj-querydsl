@@ -13,6 +13,8 @@ import study.querydsl.entity.QTeam;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 
 import java.util.List;
 
@@ -295,13 +297,52 @@ public class QuerydslBasicTest {
         List<Tuple> result = queryFactory
                 .select(member,team)
                 .from(member)
-                .leftJoin(team).on(member.username.eq(team.name)) //leftjoin과 join에 들어가는 부분이 다름
+                .leftJoin(team).on(member.username.eq(team.name)) //leftjoin과 join에 들어가는 부분이 다
                 .where(member.username.eq(team.name))
                 .fetch();
 
         for (Tuple tuple : result) {
             System.out.println("tuple = " +tuple);
         }
+    }
 
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    /**
+     * 페치 조인이 없을 경우
+     */
+    @Test
+    public void fetchJoinNo(){
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+
+        assertThat(loaded).as("페치 조인 미적용").isFalse();
+    }
+
+    /**
+     * 페치 조인이 있는 경우
+     */
+    @Test
+    public void fetchJoinUse(){
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .join(member.team,team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+
+        assertThat(loaded).as("페치 조인 미적용").isTrue();
     }
 }
